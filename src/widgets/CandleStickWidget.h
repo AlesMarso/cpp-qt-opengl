@@ -15,6 +15,8 @@ public:
     void appendCandles(const CandleVector& candles);
     void setVisibleCount(int count);        // сколько свечей показывать
 
+    void setVisibleRect(const QRectF& rect);
+
 protected:
     /* OpenGL life‑cycle */
     void initializeGL() override;
@@ -56,4 +58,6 @@ private:
 
     int m_startVisibleCount = 120;
     int m_startFirstVisible = 0;
+
+    QRectF m_chartArea;
 };

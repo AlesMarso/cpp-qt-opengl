@@ -34,7 +34,9 @@ int main(int argc, char* argv[])
     }
     // -------------------------------------
 
+    chart->setVisibleRect(QRectF(10, 10, 1260, 700));
     chart->appendCandles(data);
     chart->setVisibleCount(500);      // сколько свечей показывать сразу
+
     return app.exec();
 }

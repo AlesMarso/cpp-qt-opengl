@@ -6,6 +6,8 @@
 #include <cmath>
 #include <thread>
 #include <mutex>
+#include <QRectF>
+#include <iostream>
 
 CandlestickWidget::CandlestickWidget(QWidget* parent)
     : QOpenGLWidget(parent)
@@ -32,7 +34,7 @@ CandlestickWidget::~CandlestickWidget()
 }
 
 /* --------------------------------------------------------------
-   1️⃣  Инициализация OpenGL (создание шейдеров, VAO/VBO)
+   1️)  Инициализация OpenGL (создание шейдеров, VAO/VBO)
    -------------------------------------------------------------- */
 void CandlestickWidget::initializeGL()
 {
@@ -115,11 +117,11 @@ void CandlestickWidget::initializeGL()
 }
 void CandlestickWidget::resizeGL(int w, int h)
 {
-   glViewport(0, 0, w, h);
+    glViewport(0, 0, w, h);
 }
 
 /* --------------------------------------------------------------
-   3️⃣  Добавление новых свечей
+   3️)  Добавление новых свечей
    -------------------------------------------------------------- */
 void CandlestickWidget::appendCandles(const CandleVector& candles)
 {
@@ -129,7 +131,7 @@ void CandlestickWidget::appendCandles(const CandleVector& candles)
 }
 
 /* --------------------------------------------------------------
-   4️⃣  Установка количества свечей, которое должно быть видно
+   4️)  Установка количества свечей, которое должно быть видно
    -------------------------------------------------------------- */
 void CandlestickWidget::setVisibleCount(int cnt)
 {
@@ -143,17 +145,21 @@ void CandlestickWidget::setVisibleCount(int cnt)
     update();
 }
 
+void CandlestickWidget::setVisibleRect(const QRectF& rect)
+{
+    m_chartArea = rect;
+}
+
 /* --------------------------------------------------------------
-   5️⃣  Пересборка VBO только из видимой части
+   5️)  Пересборка VBO только из видимой части
    -------------------------------------------------------------- */
 void CandlestickWidget::updateVBO()
 {
     if (m_allCandles.empty())
         return;
 
-    int start = m_firstVisible;
-    int end = std::min(start + m_visibleCount,
-        int(m_allCandles.size()));
+    int start = 0;// m_firstVisible;
+    int end = int(m_allCandles.size()); //std::min(start + m_visibleCount, int(m_allCandles.size()));
 
     /* Одна свеча → 8 вершин:
        2 – тень (wick)
@@ -168,8 +174,8 @@ void CandlestickWidget::updateVBO()
     /* Ширина свечи в NDC‑единицах.
        Мы хотим, чтобы тело заняло ~80 % от «ячейки» между соседними свечами,
        а пустая часть — 20 % (отступы слева/справа). */
-    const float cellWidth = 1;// 2 / float(m_visibleCount) * m_zoomX; // ширина одной "ячейки" в NDC
-    const float candleW = cellWidth * 0.8f;   // 80 % от ячейки – реальная ширина тела
+    const float cellWidth = 1;
+    const float candleW = cellWidth * 0.8f;
     const float halfW = candleW * 0.5f;
 
     std::thread th(
@@ -178,10 +184,6 @@ void CandlestickWidget::updateVBO()
             for (int i = start; i < end; ++i) {
                 const Candle& c = m_allCandles[i];
 
-                /* X‑координата центра свечи в NDC:
-                   левая граница окна = -1,
-                   шаг = cellWidth,
-                   центр i‑й свечи = -1 + cellWidth/2 + (i‑start)*cellWidth   */
                 float xCenter = cellWidth / 2 + float(i);
 
                 bool bullish = c.close >= c.open;
@@ -211,10 +213,6 @@ void CandlestickWidget::updateVBO()
             for (int i = start; i < end; ++i) {
                 const Candle& c = m_allCandles[i];
 
-                /* X‑координата центра свечи в NDC:
-                   левая граница окна = -1,
-                   шаг = cellWidth,
-                   центр i‑й свечи = -1 + cellWidth/2 + (i‑start)*cellWidth   */
                 float xCenter = cellWidth / 2 + float(i);
 
                 bool bullish = c.close >= c.open;
@@ -222,7 +220,6 @@ void CandlestickWidget::updateVBO()
                 float g = bullish ? 1.0f : 0.0f;
                 float b = 0.0f;
 
-                /* ---------- Тень (wick) — 2 вершины (только Y меняется) ---------- */
                 verts.insert(verts.end(),
                     { xCenter, float(c.high), r, g, b,
                       xCenter, float(c.low),  r, g, b });
@@ -260,9 +257,6 @@ void CandlestickWidget::updateVBO()
     }
 }
 
-/* --------------------------------------------------------------
-   6️⃣  Вычисление MVP (ортографическая проекция)
-   -------------------------------------------------------------- */
 QMatrix4x4 CandlestickWidget::computeMVP() const
 {
     if (m_allCandles.empty())
@@ -275,7 +269,7 @@ QMatrix4x4 CandlestickWidget::computeMVP() const
     int end = std::min(start + m_visibleCount,
         int(m_allCandles.size()));
 
-    /* Y‑границы в текущем окне */
+    // Y‑границы в текущем окне 
     double minY = std::numeric_limits<double>::max();
     double maxY = std::numeric_limits<double>::lowest(); 
     for (int i = start; i < end; ++i) {
@@ -291,31 +285,19 @@ QMatrix4x4 CandlestickWidget::computeMVP() const
     double midY = (minY + maxY) * 0.5;
     double rangeY = std::max(1e-6, maxY - minY);
 
-    /* Ортографическая проекция:
-         X‑диапазон:   -1 … +1  →  каждая "единица" X‑координаты будет
-                        растягиваться на 2 / visibleCount.
-         Y‑диапазон:   -1 … +1  →  (price‑midY) * 2 / rangeY.
-       Затем масштабируем по X‑оси на zoom (m_zoomX).              */
+    double height = (maxY - minY);
+    double width = right - left;
+
     QMatrix4x4 proj;
     proj.ortho(left, right, minY, maxY, -1.0f, 1.0f);
 
-    const auto sz = size();
+    std::cout << "left = " << left << " right = " << right << std::endl;
 
-    QMatrix4x4 model;
-    // сначала переводим X‑координату в [-1, +1] (по количеству свечей)
-    //model.scale(2 / float(m_visibleCount) * m_zoomX, 1.0f, 1.0f);
-    // потом перемещаем так, чтобы X‑0 оказалось в левой границе окна
-    // теперь Y‑масштаб и смещение
-    //model.scale(1.0f, float(2.0 / rangeY), 1.0f);
-    //model.translate(0.0f, float(-midY), 0.0f);
-
-    //glOrtho((double)m_firstVisible, (double)(m_firstVisible + m_visibleCount), minY, maxY, -1.0f, 1.0f);
-
-    return proj * model;
+    return proj;
 }
 
 /* --------------------------------------------------------------
-   7️⃣  Рендер
+   7️)  Рендер
    -------------------------------------------------------------- */
 void CandlestickWidget::paintGL()
 {
@@ -325,45 +307,56 @@ void CandlestickWidget::paintGL()
     if (m_allCandles.empty())
         return;
 
+    QPointF bottomLeft = m_chartArea.bottomLeft();
+    auto y = rect().height() - bottomLeft.y();
+
+    glViewport(bottomLeft.x(), y, m_chartArea.width(), m_chartArea.height());
+
     QMatrix4x4 mvp = computeMVP();
 
     m_program->bind();
     m_program->setUniformValue("uMVP", mvp);   // ← обычный uniform
 
     /* Сколько свечей действительно находится в буфере? */
-    int visibleCandles = std::min(m_visibleCount,
-        int(m_allCandles.size()) - m_firstVisible);
+    int visibleCandles = std::min(m_visibleCount, int(m_allCandles.size()) - m_firstVisible);
 
     /* 1) Тело (body) – 6 вершин на свечу */
     glBindVertexArray(m_idVAOBody);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOBody);
-    glDrawArrays(GL_TRIANGLES, 0, visibleCandles * 6);
+    glDrawArrays(GL_TRIANGLES, m_firstVisible * 6, m_visibleCount * 6);
 
     /* 2) Тени (wick) – 2 вершины на свечу */
     glBindVertexArray(m_idVAOWick);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOWick);
-    glDrawArrays(GL_LINES, 0, visibleCandles * 2);
+    glDrawArrays(GL_LINES, m_firstVisible * 2, m_visibleCount * 2);
+
+    std::cout << "first = " << m_firstVisible << " count = " << m_visibleCount << std::endl;
 
     glBindVertexArray(0);
     m_program->release();
 }
 
 /* --------------------------------------------------------------
-   8️⃣  Обработка ввода – зум + панорамирование
+   8️)  Обработка ввода – зум + панорамирование
    -------------------------------------------------------------- */
 void CandlestickWidget::wheelEvent(QWheelEvent* event)
 {
+    if(!m_chartArea.contains(event->position()))
+        return;
+
     // каждый «шаг» колеса = 120 → 15 % зума
     int step = (event->angleDelta().y() > 0) ? -10 : +10;
     m_firstVisible = std::clamp(m_firstVisible + step, 0, static_cast<int>(m_allCandles.size()) - m_visibleCount);
     event->accept();
 
-    updateVBO();
     update();
 }
 
 void CandlestickWidget::mousePressEvent(QMouseEvent* event)
 {
+    if (!m_chartArea.contains(event->position()))
+        return;
+
     if (event->button() == Qt::LeftButton)
     {
         m_isDragging = true;
@@ -375,6 +368,9 @@ void CandlestickWidget::mousePressEvent(QMouseEvent* event)
 
 void CandlestickWidget::mouseMoveEvent(QMouseEvent* event)
 {
+    if (!m_chartArea.contains(event->position()))
+        return;
+
     if (!m_isDragging)
         return;
 
@@ -390,7 +386,6 @@ void CandlestickWidget::mouseMoveEvent(QMouseEvent* event)
 
     m_visibleCount = newCount;
 
-    updateVBO();
     update();
 }
 
