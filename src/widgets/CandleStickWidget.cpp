@@ -141,7 +141,6 @@ void CandlestickWidget::setVisibleCount(int cnt)
     if (m_firstVisible + m_visibleCount > m_allCandles.size())
         m_firstVisible = std::max(0, int(m_allCandles.size()) - m_visibleCount);
 
-    updateVBO();
     update();
 }
 
@@ -291,8 +290,6 @@ QMatrix4x4 CandlestickWidget::computeMVP() const
     QMatrix4x4 proj;
     proj.ortho(left, right, minY, maxY, -1.0f, 1.0f);
 
-    std::cout << "left = " << left << " right = " << right << std::endl;
-
     return proj;
 }
 
@@ -329,8 +326,6 @@ void CandlestickWidget::paintGL()
     glBindVertexArray(m_idVAOWick);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOWick);
     glDrawArrays(GL_LINES, m_firstVisible * 2, m_visibleCount * 2);
-
-    std::cout << "first = " << m_firstVisible << " count = " << m_visibleCount << std::endl;
 
     glBindVertexArray(0);
     m_program->release();
