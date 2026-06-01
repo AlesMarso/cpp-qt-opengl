@@ -4,6 +4,7 @@
 #include <QOpenGLShaderProgram>
 #include "data/Candle.h"
 
+
 class CandlestickWidget : public QOpenGLWidget,
     protected QOpenGLFunctions_4_5_Core
 {

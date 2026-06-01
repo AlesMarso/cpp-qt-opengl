@@ -3,7 +3,7 @@
 #include <QDateTime>
 
 struct Candle {
-    QDateTime time;
+    int       pointNum;
     double    open;
     double    high;
     double    low;

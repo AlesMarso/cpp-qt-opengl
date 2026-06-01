@@ -17,6 +17,8 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp" "${SOURCE_DIR}/*.h")
 
+source_group(TREE ${SOURCE_DIR} FILES ${SOURCES})
+
 add_executable(${PROJECT_NAME} ${SOURCES}) 
 
 # Include current source directories

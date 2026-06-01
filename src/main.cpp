@@ -6,6 +6,7 @@
 #include "window/MainWindow.h"
 
 #include "widgets/CandleStickWidget.h"
+#include "widgets/CandleStickGraphicsView.h"
 
 int main(int argc, char* argv[])
 {
@@ -14,7 +15,7 @@ int main(int argc, char* argv[])
     win.resize(1280, 720);
     win.setWindowTitle(QStringLiteral("Candlestick (OpenGL 4.5)"));
 
-    auto* chart = new CandlestickWidget;
+    auto* chart = new CCandleStickGraphicsView();
     win.setCentralWidget(chart);
     win.show();
 
@@ -29,14 +30,16 @@ int main(int argc, char* argv[])
         double close = open + (rng->bounded(13) - 6);      // отклонение -6 … +6
         double high = std::max(open, close) + rng->bounded(5);
         double low = std::min(open, close) - rng->bounded(5);
-        data.push_back({ now.addSecs(i * 60), open, high, low, close });
+        data.push_back({ i, open, high, low, close });
         open = close;
     }
     // -------------------------------------
 
-    chart->setVisibleRect(QRectF(10, 10, 1260, 700));
-    chart->appendCandles(data);
-    chart->setVisibleCount(500);      // сколько свечей показывать сразу
+    //chart->setVisibleRect(QRectF(10, 10, 1260, 700));
+    //chart->appendCandles(data);
+    //chart->setVisibleCount(500);      // сколько свечей показывать сразу
+
+    chart->AppendCandles(data);
 
     return app.exec();
 }

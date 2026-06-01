@@ -180,8 +180,14 @@ void CandlestickWidget::updateVBO()
     std::thread th(
         [this, &bodyVerts, start, end, cellWidth, candleW, halfW]()
         {
+            int point = 0;
+
             for (int i = start; i < end; ++i) {
-                const Candle& c = m_allCandles[i];
+
+                if (i % 2 == 0)
+                    continue;
+
+                Candle& c = m_allCandles[i];
 
                 float xCenter = cellWidth / 2 + float(i);
 
@@ -202,6 +208,8 @@ void CandlestickWidget::updateVBO()
                       xCenter - halfW, yOpen,  r, g, b,
                       xCenter + halfW, yClose, r, g, b,
                       xCenter - halfW, yClose, r, g, b });
+
+                c.pointNum = point++;
             }
         }
     );
@@ -209,8 +217,14 @@ void CandlestickWidget::updateVBO()
     std::thread th1(
         [this, &verts, start, end, cellWidth, candleW, halfW]()
         {
+            int point = 0;
+
             for (int i = start; i < end; ++i) {
-                const Candle& c = m_allCandles[i];
+
+                if (i % 2 == 0)
+                    continue;
+
+                Candle& c = m_allCandles[i];
 
                 float xCenter = cellWidth / 2 + float(i);
 
@@ -222,6 +236,8 @@ void CandlestickWidget::updateVBO()
                 verts.insert(verts.end(),
                     { xCenter, float(c.high), r, g, b,
                       xCenter, float(c.low),  r, g, b });
+
+                c.pointNum = point++;
             }
         }
     );
@@ -242,6 +258,7 @@ void CandlestickWidget::updateVBO()
         glBufferSubData(GL_ARRAY_BUFFER, 0, neededBytesBody, bodyVerts.data());
     }
 
+
     auto neededBytesWick = verts.size() * sizeof(float);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOWick);
     GLsizei curSizeWick = 0;
@@ -254,6 +271,9 @@ void CandlestickWidget::updateVBO()
     else {
         glBufferSubData(GL_ARRAY_BUFFER, 0, neededBytesWick, verts.data());
     }
+
+    std::cout << "body sz = " << neededBytesBody << std::endl;
+    std::cout << "wick sz = " << neededBytesWick << std::endl;
 }
 
 QMatrix4x4 CandlestickWidget::computeMVP() const
@@ -261,8 +281,10 @@ QMatrix4x4 CandlestickWidget::computeMVP() const
     if (m_allCandles.empty())
         return QMatrix4x4();
 
-    float left = static_cast<float>(m_firstVisible);
-    float right = static_cast<float>(m_firstVisible + m_visibleCount);
+    int pointNum = m_allCandles[m_firstVisible].pointNum;
+
+    float left = static_cast<float>(pointNum);
+    float right = static_cast<float>(pointNum + m_visibleCount);
 
     int start = m_firstVisible;
     int end = std::min(start + m_visibleCount,
@@ -320,12 +342,12 @@ void CandlestickWidget::paintGL()
     /* 1) Тело (body) – 6 вершин на свечу */
     glBindVertexArray(m_idVAOBody);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOBody);
-    glDrawArrays(GL_TRIANGLES, m_firstVisible * 6, m_visibleCount * 6);
+    glDrawArrays(GL_TRIANGLES, m_allCandles[m_firstVisible].pointNum * 6, visibleCandles * 6);
 
     /* 2) Тени (wick) – 2 вершины на свечу */
     glBindVertexArray(m_idVAOWick);
     glBindBuffer(GL_ARRAY_BUFFER, m_idVBOWick);
-    glDrawArrays(GL_LINES, m_firstVisible * 2, m_visibleCount * 2);
+    glDrawArrays(GL_LINES, m_allCandles[m_firstVisible].pointNum *2, visibleCandles * 2);
 
     glBindVertexArray(0);
     m_program->release();
