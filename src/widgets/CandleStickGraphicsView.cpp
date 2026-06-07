@@ -34,3 +34,11 @@ void CCandleStickGraphicsView::AppendCandles(const CandleVector& candles)
 		m_candlesStick->update();
 	}
 }
+
+void CCandleStickGraphicsView::SetVisibleData(int count)
+{
+	if (m_candlesStick)
+	{
+		m_candlesStick->SetVisibleData(count);
+	}
+}

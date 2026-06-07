@@ -24,5 +24,8 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 # Include current source directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${SOURCE_DIR})
 
+#Precompiler header
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch/pch.h)
+
 # Link your executable to the detected components
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::OpenGL Qt6::OpenGLWidgets)

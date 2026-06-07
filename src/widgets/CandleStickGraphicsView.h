@@ -18,6 +18,8 @@ public:
 
 	void AppendCandles(const CandleVector& candles);
 
+	void SetVisibleData(int count);
+
 private:
 	CCandlesStickGraphicsItem* m_candlesStick{ nullptr };
 };

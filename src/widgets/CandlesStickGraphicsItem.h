@@ -36,6 +36,8 @@ public:
 
 	void wheelEvent(QGraphicsSceneWheelEvent* event) override;
 
+	void SetVisibleData(int count);
+
 private:
 	void initializeGL();
 	void cleanupGL();
